@@ -1,7 +1,3 @@
-//Programmare in C, non C++. Quindi no classi e oggetti
-//Ogni funzione ha un singolo punto di uscita, oppure non ritornare mai
-//L'utilizzo di goto e FPU(float,double) è vietato
-
 /*Limiti minimi e massimi di frequenza e duty cycle*/
 #define MIN_FREQ                    (250)         /* Minimum frequency (in mHz) */
 #define MAX_FREQ                    (100000)      /* Maximum frequency (in mHz) */
@@ -30,7 +26,7 @@ enum fsm {
   COUPLED                     /*COUPLED: ho riconosciuto almeno due periodi validi, la frequenza è riconosciuta correttamente*/
 };
 
-fsm currentState=fsm.UNCOUPLED;
+
 
 /*Elenco di variabili statiche (comuni a tutte le funzioni)*/
 static uint32_t frequency;    /*Frequenza da riconoscere (mHz) senza tolleranza*/
@@ -114,21 +110,103 @@ void setup() {
 /*Implementa la FSM per riconoscere la frequenza configurata        */
 /*NOTA: questa funzione deve essere scritta da voi :)               */
 /*------------------------------------------------------------------*/
+
+
+
+fsm statoCorrente = UNCOUPLED;
+
+int statoIngressoPrecedente = LOW;
+unsigned long tempoUltimoRising = 0;
+unsigned long tempoUltimoFalling = 0;
+unsigned long periodo = 0;
+unsigned long TON = 0;
+bool tonValido = false;
+
+
+
+
+
 void loop() {
   /*NOTA: per minimizzare il jitter del riconoscitore di frequenza, questa funzione non dovrebbe  */
   /*mai ritornare ad Arduino ma realizzare un ciclo infinito                                      */
+
+  unsigned long tempo = micros();
+  
   while(1){
-    switch(currentState){
+
+    bool risingEdge  = (statoIngressoPrecedente == LOW  && statoIngressoCorrente == HIGH);
+    bool fallingEdge = (statoIngressoPrecedente == HIGH && statoIngressoCorrente == LOW);
+
+    int timecurrent = digitalRead(INPUT_PIN);
+    
+/*
+    switch(statoCorrente){
       case fsm.UNCOUPLED:
+      if(statoPrecedente == statoCorrente)
+        continue;
+      else{
+
+      }
 
       break;
+
       case fsm.COUPLING:
-
       break;
+
       case fsm.COUPLED:
 
       break;
     }
+    if(statoPrecedente == INPUT_PIN){
+      continue;
+    }
+    else{
+      if (statoPrecedente == LOW){
+        if(statoCorrente == HIGH) {
+          periodo = tempo - tempoRising;
+          tempoUltimoRising = tempo;
+          TON = tempoFalling - tempoRising;
+        }
+        else{
+          
+
+        }
+
+      }
+      statoPrecedente = statoCorrente
+      
+    }
+
+
+*/
+    switch (statoCorrente) {
+      case fsm.UNCOUPLED:
+      if(statoCorrente == )
+        if (fallingEdge) {
+          TON = tempo - tempoUltimoRising;
+          tonValido = (TON >= tOnMin && TON <= tOnMax);
+        }
+        else if (risingEdge) {
+          periodo = tempo - tempoUltimoRising;
+          if ((periodo >= periodMin && periodo <= periodMax) && tonValido) {
+            statoCorrente = COUPLING;
+          }
+          tempoUltimoRising = tempo;
+        }
+        break;
+
+      case COUPLING:
+        // Logica simile, ma se fallisce torni in UNCOUPLED
+        break;
+
+      case COUPLED:
+        // Logica simile, ma se invalidi TON o T, torni in UNCOUPLED e spegni OUTPUT_PIN
+        break;
+    }
+
+    statoIngressoPrecedente = statoIngressoCorrente;
+  }
+}
   }
   /*Acquisisco il tempo corrente (in us) e lo stato corrente dell'ingresso                        */
   /*A seconda dello stato della FSM effettuo una delle seguenti operazioni:                       */
