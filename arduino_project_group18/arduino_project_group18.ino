@@ -113,10 +113,9 @@ void setup() {
 
 
 
-enum fsm current_state = UNCOUPLED;
-enum fsm previous_state = UNCOUPLED;
 
-int statoIngressoPrecedente = LOW;
+
+
 unsigned long tempoUltimoRising = 0;
 unsigned long tempoUltimoFalling = 0;
 unsigned long periodo = 0;
@@ -132,21 +131,21 @@ void loop() {
   /*mai ritornare ad Arduino ma realizzare un ciclo infinito                                      */
 
   unsigned long tempo = micros();
-  
+  enum fsm current_state = fsm.UNCOUPLED;
+  enum fsm previous_state = fsm.UNCOUPLED;
+  int statoIngressoPrecedente = LOW;
   
   while(1){
 
+    int statoIngressoCorrente = digitalRead(INPUT_PIN);
     bool risingEdge  = (statoIngressoPrecedente == LOW  && statoIngressoCorrente == HIGH);
     bool fallingEdge = (statoIngressoPrecedente == HIGH && statoIngressoCorrente == LOW);
 
-    int timecurrent = digitalRead(INPUT_PIN);
+    
 
     switch (current_state) {
       case fsm.UNCOUPLED:
-      if(current_state == previous_state){
-        break;
-      }
-      else{
+      if(risingEdge || fallingEdge){
         if (fallingEdge) {
           TON = tempo - tempoUltimoRising;
           tonValido = (TON >= tOnMin && TON <= tOnMax);
