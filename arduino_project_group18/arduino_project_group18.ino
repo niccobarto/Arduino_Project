@@ -151,22 +151,27 @@ void loop() {
           TON = tempo - tempoUltimoRising;
           tonValido = (TON >= tOnMin && TON <= tOnMax);
         }
-        else if (risingEdge) {
+        if (risingEdge) {
           periodo = tempo - tempoUltimoRising;
           if ((periodo >= periodMin && periodo <= periodMax) && tonValido) {
-            statoCorrente = COUPLING;
+            previous_state = current_state;
+            current_state = COUPLING;
           }
           tempoUltimoRising = tempo;
         }
       }
-      previous_state = current_state;
       break;
 
       case fsm.COUPLING:
-        // Logica simile, ma se fallisce torni in UNCOUPLED
+      if(current_state == previous_state){
+        TON = tempo - tempoUltimoRising;
+        tonValido = (TON >= tOnMin && TON <= tOnMax);
+      }
+
+      
         break;
 
-      case COUPLED:
+      case fsm.COUPLED:
         // Logica simile, ma se invalidi TON o T, torni in UNCOUPLED e spegni OUTPUT_PIN
         break;
     }
