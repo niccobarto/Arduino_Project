@@ -19,7 +19,7 @@
 #define OUTPUT_PIN                  (53)          /* PIN used as output */
 
 
-/*Defiizione degli stati della FSM come enumerato di valori*/
+/*Definizione degli stati della FSM come enumerato di valori*/
 enum fsm {
   UNCOUPLED = 0,              /*UNCOUPLED: ancora non ho riconosciuto nemmeno un periodo valido*/
   COUPLING,                   /*COUPLING: ho riconosciuto un singolo periodo valido, sono in attesa del secondo*/
@@ -113,7 +113,8 @@ void setup() {
 
 
 
-fsm statoCorrente = UNCOUPLED;
+enum fsm current_state = UNCOUPLED;
+enum fsm previous_state = UNCOUPLED;
 
 int statoIngressoPrecedente = LOW;
 unsigned long tempoUltimoRising = 0;
@@ -132,56 +133,20 @@ void loop() {
 
   unsigned long tempo = micros();
   
+  
   while(1){
 
     bool risingEdge  = (statoIngressoPrecedente == LOW  && statoIngressoCorrente == HIGH);
     bool fallingEdge = (statoIngressoPrecedente == HIGH && statoIngressoCorrente == LOW);
 
     int timecurrent = digitalRead(INPUT_PIN);
-    
-/*
-    switch(statoCorrente){
+
+    switch (current_state) {
       case fsm.UNCOUPLED:
-      if(statoPrecedente == statoCorrente)
-        continue;
+      if(current_state == previous_state){
+        break;
+      }
       else{
-
-      }
-
-      break;
-
-      case fsm.COUPLING:
-      break;
-
-      case fsm.COUPLED:
-
-      break;
-    }
-    if(statoPrecedente == INPUT_PIN){
-      continue;
-    }
-    else{
-      if (statoPrecedente == LOW){
-        if(statoCorrente == HIGH) {
-          periodo = tempo - tempoRising;
-          tempoUltimoRising = tempo;
-          TON = tempoFalling - tempoRising;
-        }
-        else{
-          
-
-        }
-
-      }
-      statoPrecedente = statoCorrente
-      
-    }
-
-
-*/
-    switch (statoCorrente) {
-      case fsm.UNCOUPLED:
-      if(statoCorrente == )
         if (fallingEdge) {
           TON = tempo - tempoUltimoRising;
           tonValido = (TON >= tOnMin && TON <= tOnMax);
@@ -193,9 +158,11 @@ void loop() {
           }
           tempoUltimoRising = tempo;
         }
-        break;
+      }
+      previous_state = current_state;
+      break;
 
-      case COUPLING:
+      case fsm.COUPLING:
         // Logica simile, ma se fallisce torni in UNCOUPLED
         break;
 
