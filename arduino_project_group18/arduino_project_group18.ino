@@ -149,12 +149,13 @@ void loop() {
         if (fallingEdge) {
           TON = tempo - tempoUltimoRising;
           tonValido = (TON >= tOnMin && TON <= tOnMax);
+          tempoUltimoFalling=tempo;
         }
         if (risingEdge) {
           periodo = tempo - tempoUltimoRising;
           if ((periodo >= periodMin && periodo <= periodMax) && tonValido) {
             previous_state = current_state;
-            current_state = COUPLING;
+            current_state = fsm.COUPLING;
           }
           tempoUltimoRising = tempo;
         }
@@ -171,6 +172,7 @@ void loop() {
         break;
 
       case fsm.COUPLED:
+         if()
         // Logica simile, ma se invalidi TON o T, torni in UNCOUPLED e spegni OUTPUT_PIN
         break;
     }
