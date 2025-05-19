@@ -1,40 +1,40 @@
 /*Limiti minimi e massimi di frequenza e duty cycle*/
-#define MIN_FREQ                    (250)         /* Minimum frequency (in mHz) */
-#define MAX_FREQ                    (100000)      /* Maximum frequency (in mHz) */
-#define MIN_DUTY                    (10)          /* Minimum duty cycle (in %) */
-#define MAX_DUTY                    (90)          /* Maximum duty cycle (in %) */
+#define MIN_FREQ (250)    /* Minimum frequency (in mHz) */
+#define MAX_FREQ (100000) /* Maximum frequency (in mHz) */
+#define MIN_DUTY (10)     /* Minimum duty cycle (in %) */
+#define MAX_DUTY (90)     /* Maximum duty cycle (in %) */
 
 /*Nanosecondi in un secondo (1 secondo = 10^9 nanosecondi)*/
-#define NSEC_IN_SEC                 (1000000000)  /* Nanseconds in one second */
+#define NSEC_IN_SEC (1000000000) /* Nanseconds in one second */
 
 /*Tolleranze*/
-#define TOLERANCE_FREQUENCY         (5)           /* Tolerance on frequency (per thousand) */
-#define TOLERANCE_DUTY              (1)           /* Tolerance on duty cycle (percent) */
+#define TOLERANCE_FREQUENCY (5) /* Tolerance on frequency (per thousand) */
+#define TOLERANCE_DUTY (1)      /* Tolerance on duty cycle (percent) */
 
-#define HUNDRED                     (100)         /* One hundred */
-#define THOUSAND                    (1000)        /* One thousand */
+#define HUNDRED (100)   /* One hundred */
+#define THOUSAND (1000) /* One thousand */
 
 /*PIN usati come ingresso e uscita*/
-#define INPUT_PIN                   (23)          /* PIN used as input */
-#define OUTPUT_PIN                  (53)          /* PIN used as output */
+#define INPUT_PIN (23)  /* PIN used as input */
+#define OUTPUT_PIN (53) /* PIN used as output */
 
 
 /*Definizione degli stati della FSM come enumerato di valori*/
 enum fsm {
-  UNCOUPLED = 0,              /*UNCOUPLED: ancora non ho riconosciuto nemmeno un periodo valido*/
-  COUPLING,                   /*COUPLING: ho riconosciuto un singolo periodo valido, sono in attesa del secondo*/
-  COUPLED                     /*COUPLED: ho riconosciuto almeno due periodi validi, la frequenza è riconosciuta correttamente*/
+  UNCOUPLED = 0, /*UNCOUPLED: ancora non ho riconosciuto nemmeno un periodo valido*/
+  COUPLING,      /*COUPLING: ho riconosciuto un singolo periodo valido, sono in attesa del secondo*/
+  COUPLED        /*COUPLED: ho riconosciuto almeno due periodi validi, la frequenza è riconosciuta correttamente*/
 };
 
 
 
 /*Elenco di variabili statiche (comuni a tutte le funzioni)*/
-static uint32_t frequency;    /*Frequenza da riconoscere (mHz) senza tolleranza*/
-static uint32_t dutyCycle;    /*Duty cycle da riconoscere (%) senza tolleranza*/
-static uint32_t periodMin;    /*Periodo minimo (us) da riconscere T_min*/
-static uint32_t periodMax;    /*Periodo massimo (us) da riconscere T_max*/
-static uint32_t tOnMin;       /*Larghezza d'impulso minima (us) da riconscere TON_min*/
-static uint32_t tOnMax;       /*Larghezza d'impulso massima (us) da riconscere TON_max*/
+static uint32_t frequency; /*Frequenza da riconoscere (mHz) senza tolleranza*/
+static uint32_t dutyCycle; /*Duty cycle da riconoscere (%) senza tolleranza*/
+static uint32_t periodMin; /*Periodo minimo (us) da riconscere T_min*/
+static uint32_t periodMax; /*Periodo massimo (us) da riconscere T_max*/
+static uint32_t tOnMin;    /*Larghezza d'impulso minima (us) da riconscere TON_min*/
+static uint32_t tOnMax;    /*Larghezza d'impulso massima (us) da riconscere TON_max*/
 
 
 /*Elenco delle funzioni statiche (accessibili solo da questo file .ino)*/
@@ -57,7 +57,7 @@ void setup() {
   String tmp;
   unsigned long value;
   int bValid;
-  
+
   /*Initialize serial and wait for port to open*/
   SerialUSB.begin(9600);
   SerialUSB.setTimeout(60000);
@@ -75,8 +75,7 @@ void setup() {
       if (value >= MIN_FREQ && value <= MAX_FREQ) {
         frequency = (uint32_t)value;
         bValid = 1;
-      }
-      else {
+      } else {
         printFrequencyRange(true);
       }
     }
@@ -90,8 +89,7 @@ void setup() {
       if (value >= MIN_DUTY && value <= MAX_DUTY) {
         dutyCycle = (uint32_t)value;
         bValid = 1;
-      }
-      else {
+      } else {
         printDutyCycleRange(true);
       }
     }
@@ -134,89 +132,145 @@ void loop() {
   enum fsm current_state = fsm.UNCOUPLED;
   enum fsm previous_state = fsm.UNCOUPLED;
   int statoIngressoPrecedente = LOW;
-  
-  while(1){
+
+  while (1) {
 
     int statoIngressoCorrente = digitalRead(INPUT_PIN);
-    bool risingEdge  = (statoIngressoPrecedente == LOW  && statoIngressoCorrente == HIGH);
+    bool risingEdge = (statoIngressoPrecedente == LOW && statoIngressoCorrente == HIGH);
     bool fallingEdge = (statoIngressoPrecedente == HIGH && statoIngressoCorrente == LOW);
 
-    
+
 
     switch (current_state) {
       case fsm.UNCOUPLED:
-      if(risingEdge || fallingEdge){
-        if (fallingEdge) {
-          TON = tempo - tempoUltimoRising;
-          tonValido = (TON >= tOnMin && TON <= tOnMax);
-          tempoUltimoFalling=tempo;
-        }
-        if (risingEdge) {
-          periodo = tempo - tempoUltimoRising;
-          if ((periodo >= periodMin && periodo <= periodMax) && tonValido) {
-            previous_state = current_state;
-            current_state = fsm.COUPLING;
+        if (risingEdge || fallingEdge) {
+          if (fallingEdge) {
+            TON = tempo - tempoUltimoRising;
+            tonValido = (TON >= tOnMin && TON <= tOnMax);
+            tempoUltimoFalling = tempo;
           }
-          tempoUltimoRising = tempo;
+          if (risingEdge) {
+            periodo = tempo - tempoUltimoRising;
+            if ((periodo >= periodMin && periodo <= periodMax) && tonValido) {
+              previous_state = current_state;
+              current_state = fsm.COUPLING;
+            }
+            tempoUltimoRising = tempo;
+          }
         }
-      }
-      break;
-      case fsm.COUPLING:
-      if(current_state == previous_state){
-        TON = tempo - tempoUltimoRising;
-        tonValido = (TON >= tOnMin && TON <= tOnMax);
-        previous_state = current_state;
-      }
 
-      
+        break;
+      case fsm.COUPLING:
+        if (risingEdge || fallingEdge) {
+
+          if (fallingEdge) {
+            TON = tempo - tempoUltimoRising;
+            if (!tonValido = (TON >= tOnMin && TON <= tOnMax)) {
+              previous_state = current_state;
+              current_state = fsm.UNCOUPLED;
+            }
+          }
+          if (risingEdge) {
+            periodo = tempo - tempoUltimoRising;
+            if (periodo >= periodMin && periodo <= periodMax) {
+              previous_state = current_state;
+              current_state = fsm.COUPLED;
+             digitalWrite(OUTPUT_PIN, HIGH)
+            } else {
+              TonValido = false;
+              previous_state = current_state;
+              current_state = fsm.UNCOUPLED;
+            }
+            tempoUltimoRising = tempo;
+          }
+        } else {
+          TON = tempo - tempoUltimoRising;
+          periodo = tempo - tempoUltimoRising;
+          if ((statoIngressoCorrente == HIGH && TON > tOnMax) || (statoIngressoCorrente == LOW && periodo > periodMax)) {
+            TonValido = false;
+            previous_state = current_state;
+            current_state = fsm.UNCOUPLED;
+          }
+        }
+
+        tempoUltimoFalling = tempo;
         break;
 
       case fsm.COUPLED:
-         if()
-        // Logica simile, ma se invalidi TON o T, torni in UNCOUPLED e spegni OUTPUT_PIN
-        break;
+         if (risingEdge || fallingEdge) {
+             if (fallingEdge) {
+            TON = tempo - tempoUltimoRising;
+            if (!tonValido = (TON >= tOnMin && TON <= tOnMax)) {
+              previous_state = current_state;
+              current_state = fsm.UNCOUPLED;
+              digitalWrite(OUTPUT_PIN, LOW);
+            }
+          }
+          if (risingEdge) {
+            periodo = tempo - tempoUltimoRising;
+            if (!(periodo >= periodMin && periodo <= periodMax)) {
+              TonValido = false;
+              previous_state = current_state;
+              current_state = fsm.UNCOUPLED;
+              digitalWrite(OUTPUT_PIN, LOW);
+            }
+            tempoUltimoRising = tempo;
+          }
+
+         }
+         else {
+          TON = tempo - tempoUltimoRising;
+          periodo = tempo - tempoUltimoRising;
+          if ((statoIngressoCorrente == HIGH && TON > tOnMax) || (statoIngressoCorrente == LOW && periodo > periodMax)) {
+            TonValido = false;
+            previous_state = current_state;
+            current_state = fsm.UNCOUPLED;
+            digitalWrite(OUTPUT_PIN, LOW);
+          }
+         }
+          break;
     }
   }
 }
-  }
-  /*Acquisisco il tempo corrente (in us) e lo stato corrente dell'ingresso                        */
-  /*A seconda dello stato della FSM effettuo una delle seguenti operazioni:                       */
-  /*UNCOUPLED:  Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente non      */
-  /*            devo fare nulla                                                                   */
-  /*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
-  /*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
-  /*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se è vero allora  */
-  /*            ho avuto un TON valido, altrimenti ho un TON invalido. Se ho un rising edge       */
-  /*            allora controllo se il tempo dall'ultimo rising edge (il periodo) è compreso fra  */
-  /*            T_min e T_max, se è vero e il TON precedente era valido allora vado nello stato   */
-  /*            COUPLING, altrimenti ho avuto un TON invalido. Infine, se ho avuto un rising      */
-  /*            edge, aggiorno il tempo dell'ultimo rising edge                                   */
-  /*COUPLING:   Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente devo     */
-  /*            controllare di non aver superato il valore massimo di TON (se lo stato corrente è */
-  /*            alto) oppure il valore massimo di T (se è basso). Se ho passato uno dei due       */
-  /*            valori massimi ammessi allora dichiaro l'ultimo TON invalido e torno nello stato  */
-  /*            UNCOUPLED                                                                         */
-  /*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
-  /*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
-  /*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se non è vero     */
-  /*            allora ho avuto un TON invalido e torno nello stato UNCOUPLED. Se ho un rising    */
-  /*            edge allora controllo se il tempo dall'ultimo rising edge (il periodo) è compreso */
-  /*            fra T_min e T_max, se è vero allora vado nello stato COUPLED e accendo l'uscita,  */
-  /*            altrimenti ho avuto un TON invalido e torno nello stato UNCOUPLED. Infine, se ho  */
-  /*            avuto un rising edge, aggiorno il tempo dell'ultimo rising edge                   */
-  /*COUPLED:    Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente devo     */
-  /*            controllare di non aver superato il valore massimo di TON (se lo stato corrente è */
-  /*            alto) oppure il valore massimo di T (se è basso). Se ho passato uno dei due       */
-  /*            valori massimi ammessi allora dichiaro l'ultimo TON invalido e torno nello stato  */
-  /*            UNCOUPLED e spengo l'uscita                                                       */
-  /*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
-  /*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
-  /*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se non è vero     */
-  /*            allora ho avuto un TON invalido, torno nello stato UNCOUPLED e spengo l'uscita.   */
-  /*            Se ho un rising edge allora controllo se il tempo dall'ultimo rising edge (il     */
-  /*            periodo) è  compreso fra T_min e T_max, se non è vero ho avuto un TON invalido,   */
-  /*            torno nello stato UNCOUPLED e spengo l'uscita. Infine, se ho avuto un rising      */
-  /*            edge, aggiorno il tempo dell'ultimo rising edge                                   */
+}
+/*Acquisisco il tempo corrente (in us) e lo stato corrente dell'ingresso                        */
+/*A seconda dello stato della FSM effettuo una delle seguenti operazioni:                       */
+/*UNCOUPLED:  Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente non      */
+/*            devo fare nulla                                                                   */
+/*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
+/*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
+/*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se è vero allora  */
+/*            ho avuto un TON valido, altrimenti ho un TON invalido. Se ho un rising edge       */
+/*            allora controllo se il tempo dall'ultimo rising edge (il periodo) è compreso fra  */
+/*            T_min e T_max, se è vero e il TON precedente era valido allora vado nello stato   */
+/*            COUPLING, altrimenti ho avuto un TON invalido. Infine, se ho avuto un rising      */
+/*            edge, aggiorno il tempo dell'ultimo rising edge                                   */
+/*COUPLING:   Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente devo     */
+/*            controllare di non aver superato il valore massimo di TON (se lo stato corrente è */
+/*            alto) oppure il valore massimo di T (se è basso). Se ho passato uno dei due       */
+/*            valori massimi ammessi allora dichiaro l'ultimo TON invalido e torno nello stato  */
+/*            UNCOUPLED                                                                         */
+/*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
+/*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
+/*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se non è vero     */
+/*            allora ho avuto un TON invalido e torno nello stato UNCOUPLED. Se ho un rising    */
+/*            edge allora controllo se il tempo dall'ultimo rising edge (il periodo) è compreso */
+/*            fra T_min e T_max, se è vero allora vado nello stato COUPLED e accendo l'uscita,  */
+/*            altrimenti ho avuto un TON invalido e torno nello stato UNCOUPLED. Infine, se ho  */
+/*            avuto un rising edge, aggiorno il tempo dell'ultimo rising edge                   */
+/*COUPLED:    Se lo stato corrente dell'ingresso non è cambiato rispetto al precedente devo     */
+/*            controllare di non aver superato il valore massimo di TON (se lo stato corrente è */
+/*            alto) oppure il valore massimo di T (se è basso). Se ho passato uno dei due       */
+/*            valori massimi ammessi allora dichiaro l'ultimo TON invalido e torno nello stato  */
+/*            UNCOUPLED e spengo l'uscita                                                       */
+/*            Se lo stato corrente è cambiato devo valutare se ho avuto un rising edge o un     */
+/*            falling edge. Sul falling edge devo controllare se il tempo dall'ultimo rising    */
+/*            edge (la larghezza d'impulso) è compreso fra TON_min e TON_max, se non è vero     */
+/*            allora ho avuto un TON invalido, torno nello stato UNCOUPLED e spengo l'uscita.   */
+/*            Se ho un rising edge allora controllo se il tempo dall'ultimo rising edge (il     */
+/*            periodo) è  compreso fra T_min e T_max, se non è vero ho avuto un TON invalido,   */
+/*            torno nello stato UNCOUPLED e spengo l'uscita. Infine, se ho avuto un rising      */
+/*            edge, aggiorno il tempo dell'ultimo rising edge                                   */
 }
 
 
@@ -277,7 +331,8 @@ static void printConfig(void) {
   SerialUSB.print("  Input PIN: D");
   SerialUSB.println(INPUT_PIN, DEC);
   SerialUSB.print("  Output PIN: D");
-  SerialUSB.println(OUTPUT_PIN, DEC);hhhòrkil
+  SerialUSB.println(OUTPUT_PIN, DEC);
+  hhhòrkil
 }
 
 
@@ -291,7 +346,7 @@ static void printConfig(void) {
 /*------------------------------------------------------------------*/
 static void configure(void) {
   uint32_t freq;
-  
+
   /*Calcoliamo il periodo minimo e massimo*/
   /*T_min = 1 / f_max*/
   /*T_max = 1 / f_min*/
