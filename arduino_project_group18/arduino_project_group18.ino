@@ -160,11 +160,11 @@ void loop() {
         }
       }
       break;
-
       case fsm.COUPLING:
       if(current_state == previous_state){
         TON = tempo - tempoUltimoRising;
         tonValido = (TON >= tOnMin && TON <= tOnMax);
+        previous_state = current_state;
       }
 
       
@@ -174,8 +174,6 @@ void loop() {
         // Logica simile, ma se invalidi TON o T, torni in UNCOUPLED e spegni OUTPUT_PIN
         break;
     }
-
-    statoIngressoPrecedente = statoIngressoCorrente;
   }
 }
   }
@@ -277,7 +275,7 @@ static void printConfig(void) {
   SerialUSB.print("  Input PIN: D");
   SerialUSB.println(INPUT_PIN, DEC);
   SerialUSB.print("  Output PIN: D");
-  SerialUSB.println(OUTPUT_PIN, DEC);
+  SerialUSB.println(OUTPUT_PIN, DEC);hhhòrkil
 }
 
 
